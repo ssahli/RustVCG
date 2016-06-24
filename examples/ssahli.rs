@@ -1,7 +1,7 @@
 #![feature(plugin, custom_attribute)]
 #![plugin(rustproof)]
+#![allow(dead_code)]
 
-#[condition]
 fn main() {
     let mut x = 3;
     x = add_five(x);
@@ -14,7 +14,6 @@ fn add_five(mut x: i32) -> i32 {
     return x;
 }
 
-#[condition]
 struct Foo {
     x: i32,
 }

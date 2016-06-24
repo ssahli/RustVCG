@@ -14,6 +14,9 @@
 // see: 'reporting' module
 #![crate_type="dylib"]
 #![feature(plugin_registrar, rustc_private)]
+// FIXME: these should not be here!
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 
 #[macro_use]
 extern crate rustc;
@@ -34,6 +37,7 @@ use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::ext::base::SyntaxExtension::MultiDecorator;
 use syntax::codemap::Span;
 use syntax::parse::token::intern;
+use syntax::ptr::P;
 
 
 
@@ -66,25 +70,39 @@ fn expand_condition(ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annot
 
 // If the #[condition] is on a function...
 fn expand_condition_fn(meta: &MetaItem) {
-    // FIXME: both of these are just for debug
-    println!("\nThis #[condition] is correctly placed on a function\n");
-    println!("{:?}", meta.node);
     match meta.node {
-        // FIXME: just a note, Word(s) is because the Word type in MetaItemKind is a
-        // Word(InternedString), which must be captured in the match
-        MetaItemKind::Word(ref s) => {
-            println!("\nIt is a Word enum\n");
+        // FIXME: at the moment, error out if there are no arguments to the attribute
+        MetaItemKind::List(ref attribute_name, ref args) => {
+            // FIXME: arguments should be parsed by the parser module, not in this control module
+            expand_args(args);
         },
-        // FIXME: just a note, here List(..) is because we aren't referencing anything within
-        // List(), but we still have to acknowledge that there are things inside of List()
-        MetaItemKind::List(..) => {
-            println!("\nIt is a List enum\n");
-        },
-        MetaItemKind::NameValue(..) => {
-            println!("\nIt is a NameValue enum\n");
-        },
+        _ => {
+            panic!("Invalid arguments for #[condition]; did you add a pre and/or post condition?");
+        }
     }
     //let () = meta.node;
+}
+
+
+
+// FIXME: this should be in the parser module!
+// Parse the condition arguments
+fn expand_args(args: &Vec<P<MetaItem>>) {
+    match args.len() {
+        1 => {
+            println!("Found 1 argument:\n");
+            println!("{:?}\n", args[0]);
+
+        },
+        2 => {
+            println!("Found 2 arguments:\n");
+            println!("{:?}\n", args[0]);
+            println!("{:?}\n", args[1]);
+        },
+        _ => {
+            panic!("Too many arguments found for #[condition]; must have pre and/or post conditions");
+        }
+    }
 }
 
 
