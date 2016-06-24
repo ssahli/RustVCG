@@ -2,6 +2,7 @@
 #![plugin(rustproof)]
 #![allow(dead_code)]
 
+#[condition(pre="x > 0")]
 fn main() {
     let mut x = 3;
     x = add_five(x);

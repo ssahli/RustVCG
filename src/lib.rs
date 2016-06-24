@@ -7,11 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-// These can be their own .rs file OR
-// a named directory with mod.rs + other files
-// see: https://doc.rust-lang.org/book/crates-and-modules.html
-// see: 'tests' module (some things need pub that tests doesnt mind priv)
-// see: 'reporting' module
 #![crate_type="dylib"]
 #![feature(plugin_registrar, rustc_private)]
 // FIXME: these should not be here!
@@ -22,6 +17,12 @@
 extern crate rustc;
 extern crate syntax;
 extern crate rustc_plugin;
+
+// These can be their own .rs file OR
+// a named directory with mod.rs + other files
+// see: https://doc.rust-lang.org/book/crates-and-modules.html
+// see: 'tests' module (some things need pub that tests doesnt mind priv)
+// see: 'reporting' module
 
 pub mod reporting;
 pub mod z3_interface;
@@ -71,8 +72,8 @@ fn expand_condition(ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annot
 // If the #[condition] is on a function...
 fn expand_condition_fn(meta: &MetaItem) {
     match meta.node {
-        // FIXME: at the moment, error out if there are no arguments to the attribute
-        MetaItemKind::List(ref attribute_name, ref args) => {
+        // FIXME: at the moment, panic if there are no arguments to the attribute
+        MetaItemKind::List(_, ref args) => {
             // FIXME: arguments should be parsed by the parser module, not in this control module
             expand_args(args);
         },
@@ -92,12 +93,22 @@ fn expand_args(args: &Vec<P<MetaItem>>) {
         1 => {
             println!("Found 1 argument:\n");
             println!("{:?}\n", args[0]);
-
+            let ref arg = args[0].node;
+            match *arg {
+                MetaItemKind::List(ref arg_name, ref items) => {
+                    println!("{:?}\n", arg_name);
+                },
+                _ => {
+                    panic!("This shouldn't happen. you messed up.");
+                }
+            }
         },
         2 => {
             println!("Found 2 arguments:\n");
             println!("{:?}\n", args[0]);
             println!("{:?}\n", args[1]);
+            let ref arg1 = args[0].node;
+            let ref arg2 = args[1].node;
         },
         _ => {
             panic!("Too many arguments found for #[condition]; must have pre and/or post conditions");
