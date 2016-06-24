@@ -29,7 +29,7 @@ pub mod parser;
 mod tests;
 
 use rustc_plugin::Registry;
-use syntax::ast::{MetaItem, Item, ItemKind};
+use syntax::ast::{MetaItem, Item, ItemKind, MetaItemKind};
 use syntax::ext::base::{ExtCtxt, Annotatable};
 use syntax::ext::base::SyntaxExtension::MultiDecorator;
 use syntax::codemap::Span;
@@ -67,8 +67,24 @@ fn expand_condition(ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annot
 // If the #[condition] is on a function...
 fn expand_condition_fn(meta: &MetaItem) {
     // FIXME: both of these are just for debug
-    println!("This #[condition] is correctly placed on a function");
-    println!("{:?}", meta);
+    println!("\nThis #[condition] is correctly placed on a function\n");
+    println!("{:?}", meta.node);
+    match meta.node {
+        // FIXME: just a note, Word(s) is because the Word type in MetaItemKind is a
+        // Word(InternedString), which must be captured in the match
+        MetaItemKind::Word(ref s) => {
+            println!("\nIt is a Word enum\n");
+        },
+        // FIXME: just a note, here List(..) is because we aren't referencing anything within
+        // List(), but we still have to acknowledge that there are things inside of List()
+        MetaItemKind::List(..) => {
+            println!("\nIt is a List enum\n");
+        },
+        MetaItemKind::NameValue(..) => {
+            println!("\nIt is a NameValue enum\n");
+        },
+    }
+    //let () = meta.node;
 }
 
 

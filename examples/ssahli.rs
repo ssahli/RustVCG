@@ -1,8 +1,6 @@
 #![feature(plugin, custom_attribute)]
 #![plugin(rustproof)]
 
-extern crate rustproof;
-
 #[condition]
 fn main() {
     let mut x = 3;
