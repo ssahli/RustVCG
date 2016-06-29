@@ -22,9 +22,6 @@
 // FIXME: remove below. only for dev tools
 #![feature(core_intrinsics)]
 
-// FIXME: this is experimental. error if it isn't here
-#![feature(box_syntax)]
-
 #[macro_use]
 extern crate rustc;
 extern crate syntax;
@@ -41,14 +38,14 @@ pub mod dev_tools;
 mod tests;
 
 use rustc_plugin::Registry;
-use syntax::ast::{MetaItem, Item, ItemKind, MetaItemKind};
-use syntax::ext::base::{ExtCtxt, Annotatable};
+use syntax::ast::{MetaItem, Item, ItemKind, MetaItemKind, Block};
+use syntax::ext::base::{ExtCtxt, Annotatable, MultiItemDecorator};
 use syntax::ext::base::SyntaxExtension::MultiDecorator;
 use syntax::codemap::Span;
 use syntax::parse::token::intern;
 use syntax::ptr::P;
 
-use rustc::mir::transform::{Pass, MirPass, MirSource};
+use rustc::mir::transform::{Pass, MirPass, MirMapPass, MirSource};
 use rustc::mir::repr::{Mir, BasicBlock, BasicBlockData};
 use rustc::mir::visit::Visitor;
 use rustc::ty::TyCtxt;
@@ -58,7 +55,7 @@ pub struct Attr {
     pub node_id: u32,
     pub func_name: String,
     pub func_span: Option<Span>,
-    pub func: Option<syntax::ptr::P<syntax::ast::Block>>,
+    pub func: Option<P<Block>>,
     //pub func_mir: Option<Vec<_>>,
     pub pre_span: Option<Span>,
     pub post_span: Option<Span>,
@@ -95,28 +92,34 @@ fn control_flow(meta: &MetaItem, item: &Annotatable) {
 // Register plugin with compiler
 #[plugin_registrar]
 pub fn registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(intern("condition"), MultiDecorator(Box::new(expand_condition)));
-    reg.register_mir_pass(box DPass);
+    reg.register_syntax_extension(intern("condition"), MultiDecorator(Box::new(Foo)));
+    reg.register_mir_pass(Box::new(DPass));
 }
+
+struct Foo;
 
 // For every #[condition], this function is called
 // FIXME: I don't really know what `push: &mut FnMut(Annotatable)` is, but I know its required.
 /// Checks an attribute for proper placement and starts the control flow of the application
-fn expand_condition(ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
-    match item {
-        &Annotatable::Item(ref it) => match it.node {
-            // If the item is a function
-            ItemKind::Fn(..) => {
-                control_flow(meta, item);
+impl MultiItemDecorator for Foo {
+    fn expand(&self, ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
+        match item {
+            &Annotatable::Item(ref it) => match it.node {
+                // If the item is a function
+                ItemKind::Fn(..) => {
+                    control_flow(meta, item);
+                },
+                // Otherwise, it shouldn't have #[condition] on it
+                _ => expand_bad_item(ctx, span),
             },
-            // Otherwise, it shouldn't have #[condition] on it
+            // If it isn't an item at all, also shouldn't have #[condition] on it
             _ => expand_bad_item(ctx, span),
-        },
-        // If it isn't an item at all, also shouldn't have #[condition] on it
-        _ => expand_bad_item(ctx, span),
+        }
     }
 }
 
+// FIXME: finish this!
+// impl DPass for Foo { }
 
 // If the #[condition] is not on a function, error out
 fn expand_bad_item(ctx: &mut ExtCtxt, span: Span) {
@@ -138,7 +141,13 @@ struct DPass;
 
 impl<'tcx> Pass for DPass {
 }
-
+/*
+impl<'tcx, T: MirPass<'tcx>> MirMapPass<'tcx> for T {
+    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx> map: &mut MirMap<'tcx>, hooks: &mut [Box<for<'s> MirPassHook<'s>>]) {
+        if (
+    }
+}
+*/
 impl<'tcx> MirPass<'tcx> for DPass {
     fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
        GetVisitor.visit_mir(mir); 
