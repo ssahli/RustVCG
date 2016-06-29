@@ -29,6 +29,8 @@ use super::Attr;
 pub fn parse_function(builder: &mut Attr, item: &Annotatable) {
     match item {
         &Annotatable::Item(ref x) => {
+            //get node id
+            builder.node_id = x.id;
             //get function name
             builder.func_name = x.ident.to_string();
             //get span

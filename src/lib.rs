@@ -22,6 +22,9 @@
 // FIXME: remove below. only for dev tools
 #![feature(core_intrinsics)]
 
+// FIXME: this is experimental. error if it isn't here
+#![feature(box_syntax)]
+
 #[macro_use]
 extern crate rustc;
 extern crate syntax;
@@ -45,12 +48,18 @@ use syntax::codemap::Span;
 use syntax::parse::token::intern;
 use syntax::ptr::P;
 
+use rustc::mir::transform::{Pass, MirPass, MirSource};
+use rustc::mir::repr::{Mir, BasicBlock, BasicBlockData};
+use rustc::mir::visit::Visitor;
+use rustc::ty::TyCtxt;
+
 #[derive(Debug, Clone)]
 pub struct Attr {
+    pub node_id: u32,
     pub func_name: String,
     pub func_span: Option<Span>,
-    //pub func_stmts: Vec<_>,
     pub func: Option<syntax::ptr::P<syntax::ast::Block>>,
+    //pub func_mir: Option<Vec<_>>,
     pub pre_span: Option<Span>,
     pub post_span: Option<Span>,
     pub pre_str: String,
@@ -62,6 +71,7 @@ fn control_flow(meta: &MetaItem, item: &Annotatable) {
     //struct to hold all data pertaining to operations
     //init to 'nulls'
     let mut builder = Attr {
+        node_id: 0,
         func_name: "".to_string(),
         func_span: None,
         func: None,
@@ -74,6 +84,9 @@ fn control_flow(meta: &MetaItem, item: &Annotatable) {
     parser::parse_attribute(&mut builder, meta);
     //get function name and span
     parser::parse_function(&mut builder, item);
+    //get mir statements
+
+    //parser::parse_mir(&mut builder, data); 
 
     //println!("\nDEBUG Item\n{:#?}\n", item);
     println!("\nDEBUG Builder\n{:#?}\n", builder);
@@ -83,6 +96,7 @@ fn control_flow(meta: &MetaItem, item: &Annotatable) {
 #[plugin_registrar]
 pub fn registrar(reg: &mut Registry) {
     reg.register_syntax_extension(intern("condition"), MultiDecorator(Box::new(expand_condition)));
+    reg.register_mir_pass(box DPass);
 }
 
 // For every #[condition], this function is called
@@ -107,4 +121,26 @@ fn expand_condition(ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annot
 // If the #[condition] is not on a function, error out
 fn expand_bad_item(ctx: &mut ExtCtxt, span: Span) {
     ctx.span_err(span, "#[condition] must be placed on a function".into());
+}
+
+
+struct GetVisitor;
+
+impl<'tcx> Visitor<'tcx> for GetVisitor {
+    fn visit_basic_block_data(&mut self, bb: BasicBlock, d: &BasicBlockData<'tcx>) {
+        println!("\n{:#?}\n", bb);
+        println!("\n{:#?}\n", d);
+    }
+}
+
+
+struct DPass;
+
+impl<'tcx> Pass for DPass {
+}
+
+impl<'tcx> MirPass<'tcx> for DPass {
+    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
+       GetVisitor.visit_mir(mir); 
+    }
 }
