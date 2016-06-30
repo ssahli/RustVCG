@@ -37,6 +37,8 @@ pub mod dev_tools;
 #[cfg(test)]
 mod tests;
 
+use std::cell::Cell;
+
 use rustc_plugin::Registry;
 use syntax::ast::{MetaItem, Item, ItemKind, MetaItemKind, Block};
 use syntax::ext::base::{ExtCtxt, Annotatable, MultiItemDecorator};
@@ -45,7 +47,8 @@ use syntax::codemap::Span;
 use syntax::parse::token::intern;
 use syntax::ptr::P;
 
-use rustc::mir::transform::{Pass, MirPass, MirMapPass, MirSource};
+use rustc::mir::transform::{Pass, MirPass, MirMapPass, MirSource, MirPassHook};
+use rustc::mir::mir_map::MirMap;
 use rustc::mir::repr::{Mir, BasicBlock, BasicBlockData};
 use rustc::mir::visit::Visitor;
 use rustc::ty::TyCtxt;
@@ -142,14 +145,16 @@ struct DPass;
 impl<'tcx> Pass for DPass {
 }
 /*
-impl<'tcx, T: MirPass<'tcx>> MirMapPass<'tcx> for T {
-    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx> map: &mut MirMap<'tcx>, hooks: &mut [Box<for<'s> MirPassHook<'s>>]) {
-        if (
+impl<'tcx, T: MirPass<'tcx>> MirMapPass<'tcx> for DPass {
+    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, map: &mut MirMap<'tcx>, hooks: &mut [Box<for<'s> MirPassHook<'s>>]) {
+        GetVisitor.visit_mir(map);
     }
 }
 */
+
 impl<'tcx> MirPass<'tcx> for DPass {
     fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
        GetVisitor.visit_mir(mir); 
     }
 }
+
