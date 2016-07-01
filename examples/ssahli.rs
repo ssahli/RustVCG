@@ -1,5 +1,6 @@
 #![feature(plugin, custom_attribute)]
 #![plugin(rustproof)]
+#![allow(dead_code)]
 
 //extern crate rustproof;
 
@@ -20,6 +21,3 @@ fn add_three(mut x: i32) -> i32 {
     x = x + 5;
     return x;
 }
-//struct Foo {
-//    x: i32,
-//}

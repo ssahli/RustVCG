@@ -37,7 +37,7 @@ pub mod dev_tools;
 #[cfg(test)]
 mod tests;
 
-use std::cell::Cell;
+use std::cell::RefCell;
 
 use rustc_plugin::Registry;
 use syntax::ast::{MetaItem, Item, ItemKind, MetaItemKind, Block};
@@ -55,37 +55,37 @@ use rustc::ty::TyCtxt;
 
 #[derive(Debug, Clone)]
 pub struct Attr {
-    pub node_id: u32,
-    pub func_name: String,
-    pub func_span: Option<Span>,
-    pub func: Option<P<Block>>,
+    pub node_id: RefCell<u32>,
+    pub func_name: RefCell<String>,
+    pub func_span: RefCell<Option<Span>>,
+    pub func: RefCell<Option<P<Block>>>,
     //pub func_mir: Option<Vec<_>>,
-    pub pre_span: Option<Span>,
-    pub post_span: Option<Span>,
-    pub pre_str: String,
-    pub post_str: String,
+    pub pre_span: RefCell<Option<Span>>,
+    pub post_span: RefCell<Option<Span>>,
+    pub pre_str: RefCell<String>,
+    pub post_str: RefCell<String>,
 }
 
-fn control_flow(meta: &MetaItem, item: &Annotatable) {
+fn control_flow(builder: &Attr, meta: &MetaItem, item: &Annotatable) {
     // NOTE: EXPERIMENT: control flow happens here
     //struct to hold all data pertaining to operations
     //init to 'nulls'
+    /*
     let mut builder = Attr {
-        node_id: 0,
-        func_name: "".to_string(),
-        func_span: None,
-        func: None,
-        pre_str: "".to_string(),
-        post_str: "".to_string(),
-        pre_span: None,
-        post_span: None,
-    };
+        node_id: RefCell::new(0),
+        func_name: RefCell::new("".to_string()),
+        func_span: RefCell::new(None),
+        func: RefCell::new(None),
+        pre_str: RefCell::new("".to_string()),
+        post_str: RefCell::new("".to_string()),
+        pre_span: RefCell::new(None),
+        post_span: RefCell::new(None),
+    };*/
     //get attribute values
-    parser::parse_attribute(&mut builder, meta);
+    parser::parse_attribute(builder, meta);
     //get function name and span
-    parser::parse_function(&mut builder, item);
+    parser::parse_function(builder, item);
     //get mir statements
-
     //parser::parse_mir(&mut builder, data); 
 
     //println!("\nDEBUG Item\n{:#?}\n", item);
@@ -95,22 +95,30 @@ fn control_flow(meta: &MetaItem, item: &Annotatable) {
 // Register plugin with compiler
 #[plugin_registrar]
 pub fn registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(intern("condition"), MultiDecorator(Box::new(Foo)));
-    reg.register_mir_pass(Box::new(DPass));
+    let builder = Box::new(Attr {
+        node_id: RefCell::new(0),
+        func_name: RefCell::new("".to_string()),
+        func_span: RefCell::new(None),
+        func: RefCell::new(None),
+        pre_str: RefCell::new("".to_string()),
+        post_str: RefCell::new("".to_string()),
+        pre_span: RefCell::new(None),
+        post_span: RefCell::new(None),
+    });
+    reg.register_syntax_extension(intern("condition"), MultiDecorator(builder));
+    reg.register_mir_pass(builder);
 }
-
-struct Foo;
 
 // For every #[condition], this function is called
 // FIXME: I don't really know what `push: &mut FnMut(Annotatable)` is, but I know its required.
 /// Checks an attribute for proper placement and starts the control flow of the application
-impl MultiItemDecorator for Foo {
+impl MultiItemDecorator for Attr {
     fn expand(&self, ctx: &mut ExtCtxt, span: Span, meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
         match item {
             &Annotatable::Item(ref it) => match it.node {
                 // If the item is a function
                 ItemKind::Fn(..) => {
-                    control_flow(meta, item);
+                    control_flow(&self, meta, item);
                 },
                 // Otherwise, it shouldn't have #[condition] on it
                 _ => expand_bad_item(ctx, span),
@@ -121,13 +129,13 @@ impl MultiItemDecorator for Foo {
     }
 }
 
-// FIXME: finish this!
-// impl DPass for Foo { }
+
 
 // If the #[condition] is not on a function, error out
 fn expand_bad_item(ctx: &mut ExtCtxt, span: Span) {
     ctx.span_err(span, "#[condition] must be placed on a function".into());
 }
+
 
 
 struct GetVisitor;
@@ -140,21 +148,20 @@ impl<'tcx> Visitor<'tcx> for GetVisitor {
 }
 
 
-struct DPass;
 
-impl<'tcx> Pass for DPass {
+impl<'tcx> Pass for Attr {
 }
-/*
-impl<'tcx, T: MirPass<'tcx>> MirMapPass<'tcx> for DPass {
+
+impl<'tcx> MirMapPass<'tcx> for Attr {
     fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, map: &mut MirMap<'tcx>, hooks: &mut [Box<for<'s> MirPassHook<'s>>]) {
-        GetVisitor.visit_mir(map);
+        //GetVisitor.visit_mir(map);
     }
 }
-*/
 
+/*
 impl<'tcx> MirPass<'tcx> for DPass {
     fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
        GetVisitor.visit_mir(mir); 
     }
 }
-
+*/

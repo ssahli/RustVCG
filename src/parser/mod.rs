@@ -26,19 +26,19 @@ use super::Attr;
 
 /// Parses function information from an *Annotatable* associated with an attribute.
 /// *builder* is passed by reference
-pub fn parse_function(builder: &mut Attr, item: &Annotatable) {
+pub fn parse_function(builder: &Attr, item: &Annotatable) {
     match item {
         &Annotatable::Item(ref x) => {
             //get node id
-            builder.node_id = x.id;
+            *builder.node_id.borrow_mut() = x.id;
             //get function name
-            builder.func_name = x.ident.to_string();
+            *builder.func_name.borrow_mut() = x.ident.to_string();
             //get span
-            builder.func_span = Some(x.span);
+            *builder.func_span.borrow_mut() = Some(x.span);
             //dev_tools::print_type_of(&x.node);
             match x.node {
                 ItemKind::Fn(ref a, ref b, ref c, ref d, ref e, ref block) => {
-                    builder.func = Some(block.clone());
+                    *builder.func.borrow_mut() = Some(block.clone());
                 },
                 _ => {}
             }
@@ -49,7 +49,7 @@ pub fn parse_function(builder: &mut Attr, item: &Annotatable) {
 
 /// Parses attribute information from a *MetaItem* associated with an attribute.
 /// *builder* is passed by reference
-pub fn parse_attribute(builder: &mut Attr, meta: &MetaItem) {
+pub fn parse_attribute(builder: &Attr, meta: &MetaItem) {
     match meta.node {
         // FIXME: at the moment, error out if there are no arguments to the attribute
         MetaItemKind::List(ref attribute_name, ref args) => {
@@ -84,12 +84,12 @@ pub fn parse_attribute(builder: &mut Attr, meta: &MetaItem) {
                             //get argument
                             match y.node {
                                 super::syntax::ast::LitKind::Str(ref x, ref y) => {
-                                    builder.pre_str = x.to_string();
+                                    *builder.pre_str.borrow_mut() = x.to_string();
                                 }
                                 _ => {}
                             }
                             //get span
-                            builder.pre_span = Some(y.span);
+                            *builder.pre_span.borrow_mut() = Some(y.span);
                         },
                         _ => {},
                     }
@@ -99,12 +99,12 @@ pub fn parse_attribute(builder: &mut Attr, meta: &MetaItem) {
                             //get argument
                             match y.node {
                                 super::syntax::ast::LitKind::Str(ref x, ref y) => {
-                                    builder.post_str = x.to_string();
+                                    *builder.post_str.borrow_mut() = x.to_string();
                                 }
                                 _ => {}
                             }
                             //get span
-                            builder.post_span = Some(y.span);
+                            *builder.post_span.borrow_mut() = Some(y.span);
                         },
                         _ => {},
                     }
