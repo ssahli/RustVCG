@@ -86,7 +86,7 @@ fn control_flow(builder: &Attr, meta: &MetaItem, item: &Annotatable) {
     //get function name and span
     parser::parse_function(builder, item);
     //get mir statements
-    //parser::parse_mir(&mut builder, data); 
+    //parser::parse_mir(&mut builder, data);
 
     //println!("\nDEBUG Item\n{:#?}\n", item);
     println!("\nDEBUG Builder\n{:#?}\n", builder);
@@ -106,8 +106,9 @@ pub fn registrar(reg: &mut Registry) {
         post_span: RefCell::new(None),
     });
     reg.register_syntax_extension(intern("condition"), MultiDecorator(builder));
-    reg.register_mir_pass(builder);
+    reg.register_mir_pass(Box::new(MirVisitor));
 }
+
 
 // For every #[condition], this function is called
 // FIXME: I don't really know what `push: &mut FnMut(Annotatable)` is, but I know its required.
@@ -138,30 +139,49 @@ fn expand_bad_item(ctx: &mut ExtCtxt, span: Span) {
 
 
 
-struct GetVisitor;
+struct MirVisitor;
 
-impl<'tcx> Visitor<'tcx> for GetVisitor {
+impl<'tcx> Visitor<'tcx> for MirVisitor {
+    /*
     fn visit_basic_block_data(&mut self, bb: BasicBlock, d: &BasicBlockData<'tcx>) {
-        println!("\n{:#?}\n", bb);
-        println!("\n{:#?}\n", d);
+        //println!("\n{:#?}\n", bb);
+        //println!("\n{:#?}\n", d);
     }
+    */
+    fn visit_mir(&mut self, mir: &Mir<'tcx>) {
+        //println!("\n{:#?}\n", );
+    }
+    
 }
 
 
 
-impl<'tcx> Pass for Attr {
+impl<'tcx> Pass for MirVisitor {
 }
-
-impl<'tcx> MirMapPass<'tcx> for Attr {
+/*
+impl<'tcx> MirMapPass<'tcx> for MirVisitor {
     fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, map: &mut MirMap<'tcx>, hooks: &mut [Box<for<'s> MirPassHook<'s>>]) {
         //GetVisitor.visit_mir(map);
-    }
-}
-
-/*
-impl<'tcx> MirPass<'tcx> for DPass {
-    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
-       GetVisitor.visit_mir(mir); 
+        for (&id, mir) in &mut map.map {
+            let def_id = tcx.map.local_def_id(id);
+            let _task = tcx.dep_graph.in_task(self.dep_graph(def_id));
+            let src = MirSource::from_node(tcx, id);
+        }
     }
 }
 */
+
+impl<'tcx> MirPass<'tcx> for MirVisitor {
+    fn run_pass<'a>(&mut self, tcx: TyCtxt<'a, 'tcx, 'tcx>, src: MirSource, mir: &mut Mir<'tcx>) {
+        //MirVisitor.visit_mir(mir);
+        let item_id = src.item_id();
+        let def_id = tcx.map.local_def_id(item_id);
+        let name = tcx.item_path_str(def_id);
+        let attrs = tcx.map.attrs(item_id);
+        println!("Outer node id: {:#?}", item_id);
+        //println!("\tdef id: {:#?}", def_id);
+        println!("\tfn name: {:#?}", name);
+        println!("\tattrs: {:#?}", attrs);
+    }
+}
+
