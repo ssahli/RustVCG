@@ -47,7 +47,7 @@ This module translates `wp` from the internal `expression` format to SMT-lib for
 Files: `mod.rs`
 
 ### `src/reporting`
-rustproof's internal reporting module. This allows developers to throw meaningful rustproof warnings and errors to the user without exposing them to unhelpful rustproof internals. The macros are `rp_warn!()` and `rp_error!()`.
+Rustproof's internal reporting module. This allows developers to throw meaningful rustproof warnings and errors to the user without exposing them to unhelpful rustproof internals. The macros are `rp_warn!()` and `rp_error!()`. The macros can be implemented similar to the println!() macro.
 
 Files: `mod.rs`
 
